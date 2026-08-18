@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0d0f14" />
+<title>Mafia — Role Dealer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%8E%AD</text></svg>" />
+<style>
+  :root {
+    --bg: #0d0f14;
+    --bg-soft: #151922;
+    --panel: #1b2029;
+    --panel-2: #232a36;
+    --line: #2c3441;
+    --text: #e7ecf3;
+    --muted: #8d99ab;
+    --accent: #f0b429;
+    --mafia: #e5484d;
+    --doctor: #30a46c;
+    --civilian: #5b8def;
+    --radius: 16px;
+    --shadow: 0 10px 40px rgba(0,0,0,.45);
+    --font: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #1c2331 0%, transparent 60%),
+      var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 48px;
+    min-height: 100%;
+  }
+
+  .app { width: 100%; max-width: 560px; }
+
+  /* ---------- header ---------- */
+  header { text-align: center; margin-bottom: 28px; }
+
+  header h1 {
+    margin: 0;
+    font-size: 2.4rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    font-weight: 800;
+    background: linear-gradient(180deg, #fff 0%, #9aa7b8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  header p { margin: 6px 0 0; color: var(--muted); font-size: .9rem; letter-spacing: .04em; }
+
+  /* ---------- shared ---------- */
+  .screen { display: none; animation: fade .28s ease; }
+  .screen.active { display: block; }
+
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .card + .card { margin-top: 16px; }
+
+  h2 { margin: 0 0 4px; font-size: 1.05rem; letter-spacing: .06em; text-transform: uppercase; }
+  .hint { margin: 0 0 16px; color: var(--muted); font-size: .84rem; line-height: 1.5; }
+
+  button {
+    font-family: inherit;
+    font-size: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 12px 18px;
+    cursor: pointer;
+    transition: transform .12s ease, background .18s ease, border-color .18s ease;
+  }
+
+  button:hover:not(:disabled) { background: #2b3341; border-color: #3b4655; }
+  button:active:not(:disabled) { transform: scale(.98); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .btn-primary {
+    background: linear-gradient(180deg, #f7c948, #e0a80e);
+    border-color: #c99400;
+    color: #21180a;
+    font-weight: 700;
+    letter-spacing: .04em;
+    width: 100%;
+    padding: 15px;
+  }
+
+  .btn-primary:hover:not(:disabled) { background: linear-gradient(180deg, #ffd75e, #edb417); border-color: #c99400; }
+
+  .btn-ghost { background: transparent; }
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-row > button { flex: 1; }
+
+  /* ---------- setup ---------- */
+  .stepper { display: flex; align-items: center; gap: 12px; }
+
+  .stepper button {
+    width: 54px; height: 54px;
+    font-size: 1.6rem; line-height: 1;
+    border-radius: 14px;
+    display: grid; place-items: center;
+    flex: none;
+  }
+
+  .stepper .value {
+    flex: 1;
+    text-align: center;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 8px 0;
+  }
+
+  .stepper .value strong { display: block; font-size: 2rem; font-weight: 800; line-height: 1.1; }
+  .stepper .value span { font-size: .74rem; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; }
+
+  .seg { display: flex; gap: 8px; }
+  .seg button { flex: 1; }
+  .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #21180a; font-weight: 700; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: .86rem;
+  }
+
+  .chip b { font-variant-numeric: tabular-nums; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .dot.mafia { background: var(--mafia); }
+  .dot.doctor { background: var(--doctor); }
+  .dot.civilian { background: var(--civilian); }
+
+  .names { display: grid; gap: 8px; margin-top: 4px; max-height: 320px; overflow-y: auto; padding-right: 4px; }
+
+  .name-row { display: flex; align-items: center; gap: 10px; }
+
+  .name-row .num {
+    width: 30px; flex: none; text-align: right;
+    color: var(--muted); font-size: .84rem; font-variant-numeric: tabular-nums;
+  }
+
+  input[type="text"] {
+    flex: 1; width: 100%;
+    font-family: inherit; font-size: .95rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 11px 13px;
+  }
+
+  input[type="text"]:focus { outline: none; border-color: var(--accent); }
+  input[type="text"]::placeholder { color: #5d6878; }
+
+  .warn { color: var(--mafia); font-size: .84rem; margin: 14px 0 0; min-height: 1.2em; }
+
+  details.names-toggle { margin-top: 16px; }
+  details.names-toggle > summary {
+    cursor: pointer; color: var(--muted); font-size: .86rem;
+    list-style: none; padding: 6px 0; user-select: none;
+  }
+  details.names-toggle > summary::-webkit-details-marker { display: none; }
+  details.names-toggle > summary::before { content: "\25B8  "; }
+  details.names-toggle[open] > summary::before { content: "\25BE  "; }
+
+  /* ---------- reveal ---------- */
+  .progress { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .progress span { color: var(--muted); font-size: .82rem; letter-spacing: .1em; text-transform: uppercase; }
+
+  .bar { height: 4px; background: var(--bg-soft); border-radius: 99px; overflow: hidden; margin-bottom: 20px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s ease; }
+
+  .reveal-card {
+    position: relative;
+    min-height: 340px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: linear-gradient(160deg, var(--panel) 0%, #12161e 100%);
+    box-shadow: var(--shadow);
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 32px 24px;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .reveal-card::after {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: 20px;
+    box-shadow: inset 0 0 90px rgba(240,180,41,.06);
+    pointer-events: none;
+  }
+
+  .reveal-card.revealed { cursor: default; }
+  .reveal-card.mafia    { border-color: rgba(229,72,77,.55);  background: linear-gradient(160deg, #2a1418 0%, #150b0d 100%); }
+  .reveal-card.doctor   { border-color: rgba(48,163,108,.55); background: linear-gradient(160deg, #10251b 0%, #08150f 100%); }
+  .reveal-card.civilian { border-color: rgba(91,141,239,.55); background: linear-gradient(160deg, #141c2e 0%, #0a0f18 100%); }
+
+  .face { display: grid; gap: 10px; justify-items: center; animation: pop .3s ease; }
+  @keyframes pop { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+
+  .player-name { font-size: 1.5rem; font-weight: 700; word-break: break-word; }
+  .tap-hint { color: var(--muted); font-size: .9rem; letter-spacing: .04em; }
+  .lock { font-size: 3.4rem; line-height: 1; }
+
+  .role-emoji { font-size: 4rem; line-height: 1; }
+  .role-name { font-size: 2.1rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+  .role-name.mafia { color: var(--mafia); }
+  .role-name.doctor { color: var(--doctor); }
+  .role-name.civilian { color: var(--civilian); }
+  .role-desc { color: var(--muted); font-size: .92rem; max-width: 34ch; line-height: 1.55; }
+
+  .teammates {
+    margin-top: 6px;
+    background: rgba(229,72,77,.1);
+    border: 1px solid rgba(229,72,77,.3);
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: .88rem;
+  }
+
+  .teammates b { color: var(--mafia); }
+
+  /* ---------- summary ---------- */
+  .roster { display: grid; gap: 8px; }
+
+  .roster-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .roster-row .num { color: var(--muted); font-size: .8rem; width: 22px; flex: none; font-variant-numeric: tabular-nums; }
+  .roster-row .who { flex: 1; font-weight: 600; word-break: break-word; }
+
+  .tag {
+    font-size: .74rem; letter-spacing: .1em; text-transform: uppercase;
+    font-weight: 700; padding: 5px 11px; border-radius: 999px;
+  }
+
+  .tag.hidden-tag { background: var(--panel-2); color: var(--muted); letter-spacing: .3em; }
+  .tag.mafia { background: rgba(229,72,77,.16); color: var(--mafia); }
+  .tag.doctor { background: rgba(48,163,108,.16); color: var(--doctor); }
+  .tag.civilian { background: rgba(91,141,239,.16); color: var(--civilian); }
+
+  footer { text-align: center; color: #4d5766; font-size: .76rem; margin-top: 28px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>Mafia</h1>
+    <p>Pass-the-device role dealer</p>
+  </header>
+
+  <!-- ============ SETUP ============ -->
+  <section id="screen-setup" class="screen active">
+    <div class="card">
+      <h2>Players</h2>
+      <p class="hint">How many people are playing tonight?</p>
+
+      <div class="stepper">
+        <button type="button" id="minus" aria-label="Remove a player">&minus;</button>
+        <div class="value">
+          <strong id="count-display">8</strong>
+          <span>players</span>
+        </div>
+        <button type="button" id="plus" aria-label="Add a player">+</button>
+      </div>
+
+      <details class="names-toggle">
+        <summary>Use real names (optional)</summary>
+        <div class="names" id="name-inputs"></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>Roles</h2>
+      <p class="hint">One doctor is always dealt. Pick how many mafia you want &mdash; everyone else becomes a civilian.</p>
+
+      <div class="seg" id="mafia-seg">
+        <button type="button" data-mafia="1" aria-pressed="true">1 Mafia</button>
+        <button type="button" data-mafia="2" aria-pressed="false">2 Mafia</button>
+      </div>
+
+      <div class="chips" id="composition"></div>
+      <p class="warn" id="warning"></p>
+    </div>
+
+    <button type="button" class="btn-primary" id="deal">Deal Roles</button>
+  </section>
+
+  <!-- ============ REVEAL ============ -->
+  <section id="screen-reveal" class="screen">
+    <div class="progress">
+      <span id="progress-label">Player 1 of 8</span>
+      <span id="progress-left">7 left</span>
+    </div>
+    <div class="bar"><i id="progress-bar" style="width:0%"></i></div>
+
+    <div class="reveal-card" id="reveal-card" role="button" tabindex="0" aria-label="Tap to reveal your role"></div>
+
+    <div class="btn-row">
+      <button type="button" class="btn-ghost" id="abort">Start over</button>
+      <button type="button" class="btn-primary" id="next" style="width:auto">Reveal</button>
+    </div>
+  </section>
+
+  <!-- ============ SUMMARY ============ -->
+  <section id="screen-summary" class="screen">
+    <div class="card">
+      <h2>Everyone has their role</h2>
+      <p class="hint">Hand the device back to the host. Roles stay hidden until the host reveals them at the end of the game.</p>
+      <div class="chips" id="summary-composition"></div>
+    </div>
+
+    <div class="card">
+      <h2>Roster</h2>
+      <p class="hint" id="roster-hint">Hidden. Reveal only when the game is over.</p>
+      <div class="roster" id="roster"></div>
+      <div class="btn-row">
+        <button type="button" id="toggle-roster">Reveal all roles</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button type="button" class="btn-ghost" id="replay">Same players, re-deal</button>
+      <button type="button" class="btn-primary" id="new-game" style="width:auto">New game</button>
+    </div>
+  </section>
+
+  <footer>
+    Roles are dealt in your browser with <code>crypto.getRandomValues</code>.<br />
+    Nothing is sent anywhere.
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ------------------------------------------------------------------ *
+   * Config
+   * ------------------------------------------------------------------ */
+  const MIN_PLAYERS = 4;
+  const MAX_PLAYERS = 20;
+  const DOCTORS = 1;
+  const STORAGE_KEY = "mafia.game.v1";
+
+  const ROLES = {
+    mafia: {
+      label: "Mafia",
+      emoji: "\u{1F52A}",
+      desc: "Wake at night with your team and choose someone to eliminate. Blend in during the day."
+    },
+    doctor: {
+      label: "Doctor",
+      emoji: "\u{1F489}",
+      desc: "Each night, pick one player to save. Guess right and the mafia's kill fails."
+    },
+    civilian: {
+      label: "Civilian",
+      emoji: "\u{1F464}",
+      desc: "You have no night power. Watch, argue, and vote the mafia out before they outnumber you."
+    }
+  };
+
+  /* ------------------------------------------------------------------ *
+   * State
+   * ------------------------------------------------------------------ */
+  const state = {
+    playerCount: 8,
+    mafiaCount: 1,
+    names: [],       // raw name inputs, index-aligned to players
+    deal: [],        // [{ name, role }] in seating order
+    order: [],       // indices into deal — the order the device gets passed around
+    cursor: 0,       // position in `order`
+    revealed: false, // is the current card face-up
+    rosterOpen: false
+  };
+
+  /* ------------------------------------------------------------------ *
+   * Random — unbiased, cryptographic
+   * ------------------------------------------------------------------ */
+  function randomInt(maxExclusive) {
+    const limit = Math.floor(0x100000000 / maxExclusive) * maxExclusive;
+    const buf = new Uint32Array(1);
+    let value;
+    do {
+      crypto.getRandomValues(buf);
+      value = buf[0];
+    } while (value >= limit); // reject the tail so every outcome stays equally likely
+    return value % maxExclusive;
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Derived values
+   * ------------------------------------------------------------------ */
+  const civilianCount = () => state.playerCount - state.mafiaCount - DOCTORS;
+  const suggestedMafia = (n) => (n >= 7 ? 2 : 1);
+
+  function playerName(i) {
+    const raw = (state.names[i] || "").trim();
+    return raw || "Player " + (i + 1);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+    ));
+  }
+
+  /* ------------------------------------------------------------------ *
+   * DOM helpers
+   * ------------------------------------------------------------------ */
+  const $ = (id) => document.getElementById(id);
+
+  function showScreen(name) {
+    document.querySelectorAll(".screen").forEach((el) => el.classList.remove("active"));
+    $("screen-" + name).classList.add("active");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function compositionChips(target) {
+    const civs = civilianCount();
+    const parts = [
+      ["mafia", state.mafiaCount, "Mafia"],
+      ["doctor", DOCTORS, "Doctor"],
+      ["civilian", civs, civs === 1 ? "Civilian" : "Civilians"]
+    ];
+
+    target.innerHTML = "";
+    for (const [key, n, label] of parts) {
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.innerHTML = '<i class="dot ' + key + '"></i><b>' + n + "</b> " + label;
+      target.appendChild(chip);
+    }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Setup screen
+   * ------------------------------------------------------------------ */
+  function renderNameInputs() {
+    const box = $("name-inputs");
+
+    for (let i = box.children.length; i < state.playerCount; i++) {
+      const row = document.createElement("div");
+      row.className = "name-row";
+
+      const num = document.createElement("div");
+      num.className = "num";
+      num.textContent = (i + 1) + ".";
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.maxLength = 24;
+      input.placeholder = "Player " + (i + 1);
+      input.value = state.names[i] || "";
+      input.addEventListener("input", () => { state.names[i] = input.value; });
+
+      row.append(num, input);
+      box.appendChild(row);
+    }
+
+    while (box.children.length > state.playerCount) {
+      box.removeChild(box.lastChild);
+    }
+  }
+
+  function renderSetup() {
+    $("count-display").textContent = state.playerCount;
+    $("minus").disabled = state.playerCount <= MIN_PLAYERS;
+    $("plus").disabled = state.playerCount >= MAX_PLAYERS;
+
+    document.querySelectorAll("#mafia-seg button").forEach((btn) => {
+      const value = Number(btn.dataset.mafia);
+      btn.setAttribute("aria-pressed", String(value === state.mafiaCount));
+      // Never let the table run out of civilians.
+      btn.disabled = state.playerCount - value - DOCTORS < 1;
+    });
+
+    compositionChips($("composition"));
+
+    const civs = civilianCount();
+    let warning = "";
+    if (civs < 1) {
+      warning = "Not enough players for that many mafia.";
+    } else if (state.mafiaCount * 2 >= state.playerCount) {
+      warning = "Mafia are already half the table — they win on the spot.";
+    } else if (state.playerCount >= 9 && state.mafiaCount === 1) {
+      warning = "Tip: with " + state.playerCount + " players, 2 mafia plays better.";
+    }
+
+    $("warning").textContent = warning;
+    $("deal").disabled = civs < 1;
+
+    renderNameInputs();
+  }
+
+  function setPlayerCount(n) {
+    state.playerCount = Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, n));
+    if (civilianCount() < 1) state.mafiaCount = 1; // shrinking the table can invalidate 2 mafia
+    renderSetup();
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Dealing
+   * ------------------------------------------------------------------ */
+  function deal() {
+    const pool = [];
+    for (let i = 0; i < state.mafiaCount; i++) pool.push("mafia");
+    for (let i = 0; i < DOCTORS; i++) pool.push("doctor");
+    while (pool.length < state.playerCount) pool.push("civilian");
+
+    shuffle(pool);
+
+    state.deal = pool.map((role, i) => ({ name: playerName(i), role }));
+    // Pass the device around in a shuffled order too, so turn order leaks nothing.
+    state.order = shuffle(state.deal.map((_, i) => i));
+    state.cursor = 0;
+    state.revealed = false;
+    state.rosterOpen = false;
+
+    save();
+    renderReveal();
+    showScreen("reveal");
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Reveal screen
+   * ------------------------------------------------------------------ */
+  const currentPlayer = () => state.deal[state.order[state.cursor]];
+
+  function mafiaTeammatesOf(player) {
+    return state.deal
+      .filter((p) => p.role === "mafia" && p !== player)
+      .map((p) => p.name);
+  }
+
+  function renderReveal() {
+    const total = state.deal.length;
+    const done = state.cursor;
+    const player = currentPlayer();
+    const card = $("reveal-card");
+
+    $("progress-label").textContent = "Player " + (done + 1) + " of " + total;
+    $("progress-left").textContent = (total - done - 1) + " left";
+    $("progress-bar").style.width = (done / total) * 100 + "%";
+
+    card.className = "reveal-card";
+
+    if (!state.revealed) {
+      card.setAttribute("aria-label", "Tap to reveal the role for " + player.name);
+      card.innerHTML =
+        '<div class="face">' +
+          '<div class="lock">\u{1F0A0}</div>' +
+          '<div class="player-name">' + escapeHtml(player.name) + "</div>" +
+          '<div class="tap-hint">Make sure nobody is looking, then tap</div>' +
+        "</div>";
+      $("next").textContent = "Reveal";
+      return;
+    }
+
+    const role = ROLES[player.role];
+    card.classList.add("revealed", player.role);
+    card.setAttribute("aria-label", player.name + " is " + role.label);
+
+    let teammatesHtml = "";
+    if (player.role === "mafia") {
+      const mates = mafiaTeammatesOf(player);
+      teammatesHtml = mates.length
+        ? '<div class="teammates">Your partner: <b>' + escapeHtml(mates.join(", ")) + "</b></div>"
+        : '<div class="teammates">You work <b>alone</b>.</div>';
+    }
+
+    card.innerHTML =
+      '<div class="face">' +
+        '<div class="role-emoji">' + role.emoji + "</div>" +
+        '<div class="role-name ' + player.role + '">' + role.label + "</div>" +
+        '<div class="role-desc">' + role.desc + "</div>" +
+        teammatesHtml +
+      "</div>";
+
+    $("next").textContent = state.cursor === total - 1 ? "Done — hide" : "Hide & pass on";
+  }
+
+  function advance() {
+    if (!currentPlayer()) return; // deal already handed out, or a tampered saved cursor
+
+    if (!state.revealed) {
+      state.revealed = true;
+      renderReveal();
+      return;
+    }
+
+    state.revealed = false;
+
+    if (state.cursor < state.deal.length - 1) {
+      state.cursor++;
+      save();
+      renderReveal();
+      return;
+    }
+
+    state.cursor = state.deal.length; // mark the deal as fully handed out
+    save();
+    renderSummary();
+    showScreen("summary");
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Summary screen
+   * ------------------------------------------------------------------ */
+  function renderSummary() {
+    compositionChips($("summary-composition"));
+
+    const roster = $("roster");
+    roster.innerHTML = "";
+
+    state.deal.forEach((player, i) => {
+      const row = document.createElement("div");
+      row.className = "roster-row";
+
+      const num = document.createElement("div");
+      num.className = "num";
+      num.textContent = i + 1;
+
+      const who = document.createElement("div");
+      who.className = "who";
+      who.textContent = player.name;
+
+      const tag = document.createElement("div");
+      if (state.rosterOpen) {
+        tag.className = "tag " + player.role;
+        tag.textContent = ROLES[player.role].label;
+      } else {
+        tag.className = "tag hidden-tag";
+        tag.textContent = "•••";
+      }
+
+      row.append(num, who, tag);
+      roster.appendChild(row);
+    });
+
+    $("toggle-roster").textContent = state.rosterOpen ? "Hide roles" : "Reveal all roles";
+    $("roster-hint").textContent = state.rosterOpen
+      ? "Revealed. Everyone can see who was who."
+      : "Hidden. Reveal only when the game is over.";
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Persistence — survives an accidental refresh mid-deal
+   * ------------------------------------------------------------------ */
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        playerCount: state.playerCount,
+        mafiaCount: state.mafiaCount,
+        names: state.names,
+        deal: state.deal,
+        order: state.order,
+        cursor: state.cursor,
+        rosterOpen: state.rosterOpen
+      }));
+    } catch (_) { /* private mode or full storage — the game still works */ }
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+
+      const saved = JSON.parse(raw);
+      if (!saved || !Array.isArray(saved.deal) || !saved.deal.length) return false;
+
+      state.playerCount = saved.playerCount;
+      state.mafiaCount = saved.mafiaCount;
+      state.names = saved.names || [];
+      state.deal = saved.deal;
+      state.order = saved.order;
+      state.cursor = saved.cursor || 0;
+      state.rosterOpen = !!saved.rosterOpen;
+      state.revealed = false; // always resume face-down
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function clearSave() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+  }
+
+  function backToSetup(keepNames) {
+    clearSave();
+    state.deal = [];
+    state.order = [];
+    state.cursor = 0;
+    state.revealed = false;
+    state.rosterOpen = false;
+
+    if (!keepNames) {
+      state.names = [];
+      $("name-inputs").innerHTML = "";
+    }
+
+    renderSetup();
+    showScreen("setup");
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Wiring
+   * ------------------------------------------------------------------ */
+  $("minus").addEventListener("click", () => setPlayerCount(state.playerCount - 1));
+  $("plus").addEventListener("click", () => setPlayerCount(state.playerCount + 1));
+
+  $("mafia-seg").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-mafia]");
+    if (!btn || btn.disabled) return;
+    state.mafiaCount = Number(btn.dataset.mafia);
+    renderSetup();
+  });
+
+  $("deal").addEventListener("click", deal);
+  $("next").addEventListener("click", advance);
+  $("reveal-card").addEventListener("click", () => { if (!state.revealed) advance(); });
+
+  $("reveal-card").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      advance();
+    }
+  });
+
+  $("abort").addEventListener("click", () => {
+    if (confirm("Discard this deal and go back to setup?")) backToSetup(true);
+  });
+
+  $("toggle-roster").addEventListener("click", () => {
+    if (!state.rosterOpen && !confirm("Reveal every role to the room?")) return;
+    state.rosterOpen = !state.rosterOpen;
+    save();
+    renderSummary();
+  });
+
+  $("replay").addEventListener("click", deal); // same players, fresh roles
+  $("new-game").addEventListener("click", () => backToSetup(false));
+
+  /* ------------------------------------------------------------------ *
+   * Boot
+   * ------------------------------------------------------------------ */
+  state.mafiaCount = suggestedMafia(state.playerCount);
+  renderSetup();
+
+  if (load()) {
+    if (state.cursor >= state.deal.length) {
+      renderSummary();
+      showScreen("summary");
+    } else {
+      renderReveal();
+      showScreen("reveal");
+    }
+  }
+})();
+</script>
+</body>
+</html>
